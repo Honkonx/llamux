@@ -21,4 +21,5 @@ Responsible disclosure
 - If you need to discuss confidential details, use a secure channel provided by the maintainers (e.g., private GitHub issue or verified contact).
 
 Contact
-- For urgent concerns, use the repository's security channel or email the maintainers (replace with the project’s official contact in your environment).
+- For urgent concerns, use the repository's security channel or email the maintainers:
+- GitHub: https://github.com/JediRhymeTrix
