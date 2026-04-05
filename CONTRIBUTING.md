@@ -8,15 +8,29 @@ Thanks for your interest in contributing! Here's how to get started.
 git clone https://github.com/llamux/llamux.git
 cd llamux
 
-# Install dev dependencies
-pkg install bats shellcheck
+# Install ShellCheck
+pkg install shellcheck
+
+# Install bats-core from source (not in Termux repos)
+git clone --depth 1 https://github.com/bats-core/bats-core.git
+cd bats-core && ./install.sh $PREFIX && cd .. && rm -rf bats-core
 ```
 
 ## Running Tests
 
 ```bash
-make test          # Run all bats tests
-make lint          # Run ShellCheck on all scripts
+# Install bats-core (not available as a Termux package — install from source)
+git clone --depth 1 https://github.com/bats-core/bats-core.git
+cd bats-core && ./install.sh $PREFIX && cd .. && rm -rf bats-core
+
+# Run all tests (33 tests across 4 test files)
+make test
+
+# Run a specific test file
+bats tests/test_patch.bats
+
+# Lint all scripts with ShellCheck
+make lint
 ```
 
 ## Code Style

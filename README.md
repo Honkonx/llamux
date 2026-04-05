@@ -26,6 +26,28 @@ llamux applies these patches automatically and builds a fully functional Ollama 
 
 ## Quick Start
 
+### One-Click Bootstrap
+
+Run this single command on a fresh Termux installation to get everything set up:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/llamux/llamux/main/bootstrap.sh | bash
+```
+
+This will:
+- Install git if missing
+- Clone llamux to `~/llamux`
+- Add it to your PATH
+- Verify the installation
+
+Then just run:
+```bash
+source ~/.zshrc   # or ~/.bashrc
+llamux install
+```
+
+### Manual Install
+
 ```bash
 # Clone llamux
 git clone https://github.com/llamux/llamux.git
@@ -132,6 +154,7 @@ The Vulkan shader generator (`vulkan-shaders-gen.cpp`) defaults to `ASYNCIO_CONC
 ```
 llamux/
 ├── llamux              # Main CLI entry point
+├── bootstrap.sh        # One-click installer for fresh Termux
 ├── lib/
 │   ├── utils.sh        # Logging, colors, error handling, platform detection
 │   ├── deps.sh         # Dependency detection & installation via pkg
@@ -141,14 +164,16 @@ llamux/
 │   ├── install.sh      # Backup, install, rollback, env setup
 │   └── verify.sh       # Post-install verification & smoke test
 ├── tests/
-│   ├── test_utils.bats
-│   ├── test_source.bats
-│   ├── test_patch.bats
-│   └── test_install.bats
+│   ├── test_utils.bats # Utility function tests (12 tests)
+│   ├── test_source.bats # Version resolution tests (6 tests)
+│   ├── test_patch.bats  # Patch application tests (7 tests)
+│   └── test_install.bats # Install/rollback tests (8 tests)
 ├── .github/workflows/
-│   ├── ci.yml          # ShellCheck + bats tests
-│   └── release.yml     # Tag-based releases
-├── Makefile            # install/uninstall/test/lint targets
+│   ├── ci.yml          # ShellCheck + bats tests on push/PR
+│   └── release.yml     # Tag-based GitHub releases
+├── Makefile            # install/uninstall/test/lint/clean targets
+├── CONTRIBUTING.md     # Contribution guidelines
+├── CHANGELOG.md        # Version history
 └── README.md
 ```
 
@@ -157,8 +182,9 @@ llamux/
 ### Running Tests
 
 ```bash
-# Install bats-core
-pkg install bats
+# Install bats-core (not available as a Termux package — install from source)
+git clone --depth 1 https://github.com/bats-core/bats-core.git
+cd bats-core && ./install.sh $PREFIX && cd .. && rm -rf bats-core
 
 # Run all tests
 make test
