@@ -16,7 +16,7 @@ jobs:
         run: sudo apt-get install -y shellcheck
       - name: Lint all shell scripts
         run: |
-          shellcheck -x llamux lib/*.sh
+          shellcheck --source-path=lib -x llamux lib/*.sh
           echo "✅ ShellCheck passed"
 
   test:
@@ -26,7 +26,8 @@ jobs:
       - uses: actions/checkout@v4
       - name: Install bats-core
         run: |
-          sudo apt-get install -y bats
+          git clone --depth 1 https://github.com/bats-core/bats-core.git
+          cd bats-core && sudo ./install.sh /usr/local && cd ..
       - name: Run unit tests
         run: |
           bats tests/test_utils.bats tests/test_source.bats tests/test_patch.bats tests/test_install.bats

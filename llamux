@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # llamux — Wrangle GPU-accelerated llamas on Android
-# https://github.com/llamux/llamux
+# https://github.com/JediRhymeTrix/llamux
 set -euo pipefail
 
 readonly LLAMUX_VERSION="0.1.0"

@@ -2,7 +2,7 @@
 
 **Wrangle GPU-accelerated llamas on Android**
 
-[![CI](https://github.com/llamux/llamux/actions/workflows/ci.yml/badge.svg)](https://github.com/llamux/llamux/actions/workflows/ci.yml)
+[![CI](https://github.com/JediRhymeTrix/llamux/actions/workflows/ci.yml/badge.svg)](https://github.com/JediRhymeTrix/llamux/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 ```
@@ -31,7 +31,7 @@ llamux applies these patches automatically and builds a fully functional Ollama 
 Run this single command on a fresh Termux installation to get everything set up:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/llamux/llamux/main/bootstrap.sh | bash
+curl -fsSL https://raw.githubusercontent.com/JediRhymeTrix/llamux/main/bootstrap.sh | bash
 ```
 
 This will:
@@ -50,7 +50,7 @@ llamux install
 
 ```bash
 # Clone llamux
-git clone https://github.com/llamux/llamux.git
+git clone https://github.com/JediRhymeTrix/llamux.git
 cd llamux
 
 # Build and install the latest Ollama with Vulkan GPU support
@@ -79,7 +79,7 @@ That's it. llamux will:
 ### Install llamux
 
 ```bash
-git clone https://github.com/llamux/llamux.git
+git clone https://github.com/JediRhymeTrix/llamux.git
 cd llamux
 
 # Option A: Run directly from the repo

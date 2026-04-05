@@ -61,6 +61,7 @@ install_deps() {
     local pkg_list
     pkg_list="$(echo "$missing" | tr '\n' ' ')"
 
+    # shellcheck disable=SC2086
     if ! pkg install -y $pkg_list; then
         die "Failed to install packages: $pkg_list"
     fi

@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # llamux bootstrap — One-click installer for llamux on a fresh Termux
-# Usage: curl -fsSL https://raw.githubusercontent.com/llamux/llamux/main/bootstrap.sh | bash
+# Usage: curl -fsSL https://raw.githubusercontent.com/JediRhymeTrix/llamux/main/bootstrap.sh | bash
 set -euo pipefail
 
-REPO="https://github.com/llamux/llamux.git"
+REPO="https://github.com/JediRhymeTrix/llamux.git"
 INSTALL_DIR="${HOME}/llamux"
 
 # ── Colors ───────────────────────────────────────────────────────────────────

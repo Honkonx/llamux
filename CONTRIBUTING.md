@@ -5,7 +5,7 @@ Thanks for your interest in contributing! Here's how to get started.
 ## Development Setup
 
 ```bash
-git clone https://github.com/llamux/llamux.git
+git clone https://github.com/JediRhymeTrix/llamux.git
 cd llamux
 
 # Install ShellCheck

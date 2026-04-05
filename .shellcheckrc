@@ -5,3 +5,5 @@ external-sources=true
 disable=SC1090
 # Allow unused variables (color constants)
 disable=SC2034
+# Allow color variables in printf format strings (intentional pattern)
+disable=SC2059

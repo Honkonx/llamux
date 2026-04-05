@@ -122,7 +122,7 @@ rollback() {
 
     # Find the most recent backup
     local latest_backup
-    latest_backup="$(ls -1d "${LLAMUX_BACKUP_DIR}"/*/ 2>/dev/null | sort -r | head -1)"
+    latest_backup="$(find "${LLAMUX_BACKUP_DIR}" -maxdepth 1 -mindepth 1 -type d 2>/dev/null | sort -r | head -1)"
 
     if [[ -z "$latest_backup" ]]; then
         die "No backup directories found"

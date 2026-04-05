@@ -51,7 +51,7 @@ die() {
 
 # ── Banner ──────────────────────────────────────────────────────────────────
 print_banner() {
-    printf "${BOLD}${CYAN}"
+    printf '%s%s' "$BOLD" "$CYAN"
     cat <<'BANNER'
   _ _                            
  | | | __ _ _ __ ___  _   ___  __
@@ -59,8 +59,8 @@ print_banner() {
  | | | (_| | | | | | | |_| |>  < 
  |_|_|\__,_|_| |_| |_|\__,_/_/\_\
 BANNER
-    printf "${RESET}"
-    printf "${DIM}  Wrangle GPU-accelerated llamas on Android${RESET}\n\n"
+    printf '%s' "$RESET"
+    printf '%s  Wrangle GPU-accelerated llamas on Android%s\n\n' "$DIM" "$RESET"
 }
 
 # ── Platform checks ────────────────────────────────────────────────────────
