@@ -1,0 +1,5 @@
+# CODEOWNERS
+
+# Maintainers for llamux repository
+# This ensures PRs require review from the designated maintainers.
+* @JediRhymeTrix
