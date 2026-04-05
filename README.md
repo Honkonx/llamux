@@ -17,7 +17,7 @@ llamux is a CLI tool that automates building [Ollama](https://ollama.com) from s
 
 ## Why?
 
-Ollama's official releases don't support Android. Building from source on Termux requires several patches:
+Ollama's official releases don't support Android. Unofficial binaries don't support GPU acceleration. Building from source on Termux requires several patches:
 
 - **CMakeLists.txt** uses `RUNTIME_DEPENDENCIES` which Android's CMake doesn't support
 - **Vulkan shader compilation** deadlocks on Android due to high concurrency defaults (`ASYNCIO_CONCURRENCY=64`)
