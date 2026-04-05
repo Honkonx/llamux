@@ -1,0 +1,22 @@
+# llamux build artifacts
+llamux-build/
+build/
+*.log
+
+# Go
+vendor/
+
+# Compiled objects
+*.o
+*.a
+*.so
+
+# OS
+.DS_Store
+
+# Python
+*.pyc
+__pycache__/
+
+# Node
+node_modules/

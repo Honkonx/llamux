@@ -1,0 +1,224 @@
+#!/usr/bin/env bash
+# llamux — Wrangle GPU-accelerated llamas on Android
+# https://github.com/llamux/llamux
+set -euo pipefail
+
+readonly LLAMUX_VERSION="0.1.0"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# ── Load library modules ────────────────────────────────────────────────────
+for lib in utils deps source patch build install verify; do
+    # shellcheck source=/dev/null
+    source "${SCRIPT_DIR}/lib/${lib}.sh"
+done
+
+# ── Usage ────────────────────────────────────────────────────────────────────
+print_usage() {
+    print_banner
+    cat <<EOF
+${BOLD}USAGE${RESET}
+    llamux <command> [options]
+
+${BOLD}COMMANDS${RESET}
+    install     Build and install ollama with Vulkan GPU acceleration
+    rollback    Restore the previous ollama installation from backup
+    status      Show current installation status
+    deps        Install required build dependencies
+    clean       Remove build artifacts
+    version     Show llamux version
+    help        Show this help message
+
+${BOLD}INSTALL OPTIONS${RESET}
+    --version VER    Build a specific ollama version (default: latest)
+    --no-vulkan      Build without Vulkan GPU support (CPU only)
+    --no-smoke       Skip the post-install smoke test
+    --boot-service   Set up Termux:Boot auto-start service
+    --dry-run        Show what would be done without executing
+    --jobs N         Parallel build jobs (default: 1, higher may OOM)
+
+${BOLD}EXAMPLES${RESET}
+    llamux install                        # Latest version with Vulkan
+    llamux install --version 0.20.2       # Specific version
+    llamux install --no-vulkan            # CPU-only build
+    llamux rollback                       # Restore previous version
+    llamux status                         # Check what's installed
+
+${BOLD}ENVIRONMENT${RESET}
+    LLAMUX_DEBUG=1    Enable debug logging
+
+EOF
+}
+
+# ── Command: install ─────────────────────────────────────────────────────────
+cmd_install() {
+    local target_version=""
+    local enable_vulkan="true"
+    local dry_run="false"
+    local skip_smoke="false"
+    local boot_service="false"
+    local jobs="1"
+
+    # Parse arguments
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --version)    target_version="$2"; shift 2 ;;
+            --no-vulkan)  enable_vulkan="false"; shift ;;
+            --dry-run)    dry_run="true"; shift ;;
+            --no-smoke)   skip_smoke="true"; shift ;;
+            --boot-service) boot_service="true"; shift ;;
+            --jobs)       jobs="$2"; shift 2 ;;
+            *)            die "Unknown option: $1" ;;
+        esac
+    done
+
+    print_banner
+
+    # ── Pre-flight checks ────────────────────────────────────────────────
+    assert_termux
+    assert_arch
+
+    # ── Resolve version ──────────────────────────────────────────────────
+    local version
+    version="$(resolve_version "$target_version")"
+    local tag
+    tag="$(normalize_tag "$version")"
+    local ver_num
+    ver_num="$(version_number "$tag")"
+
+    log_info "Target: ollama $tag (Vulkan: $enable_vulkan)"
+
+    if [[ "$dry_run" == "true" ]]; then
+        log_info "[dry-run] Would perform the following:"
+        log_info "  1. Install dependencies"
+        log_info "  2. Clone ollama $tag"
+        log_info "  3. Apply Android/Termux patches"
+        log_info "  4. Build native libraries (Vulkan: $enable_vulkan)"
+        log_info "  5. Build Go binary"
+        log_info "  6. Backup current installation"
+        log_info "  7. Install new build"
+        log_info "  8. Configure environment"
+        [[ "$boot_service" == "true" ]] && log_info "  9. Set up boot service"
+        log_info "  10. Run smoke test"
+        return 0
+    fi
+
+    # ── Step 1: Dependencies ─────────────────────────────────────────────
+    log_step "Step 1/8: Installing dependencies..."
+    install_deps "$dry_run"
+    verify_tools
+
+    # ── Step 2: Fetch source ─────────────────────────────────────────────
+    log_step "Step 2/8: Fetching ollama source..."
+    fetch_source "$tag"
+
+    # ── Step 3: Apply patches ────────────────────────────────────────────
+    log_step "Step 3/8: Applying patches..."
+    apply_patches "$LLAMUX_BUILD_DIR" "$enable_vulkan"
+    verify_patches "$LLAMUX_BUILD_DIR"
+
+    # ── Step 4-5: Build ──────────────────────────────────────────────────
+    log_step "Step 4-5/8: Building ollama..."
+    run_build "$LLAMUX_BUILD_DIR" "$tag" "$enable_vulkan" "$jobs"
+
+    # ── Step 6: Backup ───────────────────────────────────────────────────
+    log_step "Step 6/8: Backing up current installation..."
+    backup_current
+
+    # ── Step 7: Install ──────────────────────────────────────────────────
+    log_step "Step 7/8: Installing..."
+    install_build "$LLAMUX_BUILD_DIR"
+    setup_environment "$enable_vulkan"
+
+    if [[ "$boot_service" == "true" ]]; then
+        setup_boot_service
+    fi
+
+    # ── Step 8: Verify ───────────────────────────────────────────────────
+    log_step "Step 8/8: Verifying installation..."
+    verify_binary
+    verify_libraries "$enable_vulkan"
+
+    if [[ "$skip_smoke" != "true" ]]; then
+        run_smoke_test "$enable_vulkan"
+    fi
+
+    # ── Cleanup build artifacts ──────────────────────────────────────────
+    log_step "Cleaning up build artifacts..."
+    cleanup_dir "$LLAMUX_BUILD_DIR"
+    go clean -cache 2>/dev/null || true
+
+    # ── Done! ────────────────────────────────────────────────────────────
+    echo ""
+    log_ok "═══════════════════════════════════════════════════════"
+    log_ok "  ollama $ver_num installed successfully!"
+    if [[ "$enable_vulkan" == "true" ]]; then
+        log_ok "  Vulkan GPU acceleration: ENABLED"
+    else
+        log_ok "  CPU-only mode"
+    fi
+    log_ok "═══════════════════════════════════════════════════════"
+    echo ""
+    log_info "Start the server:  ollama serve"
+    log_info "Pull a model:      ollama pull llama3.2:1b"
+    log_info "Chat:              ollama run llama3.2:1b"
+}
+
+# ── Command: rollback ────────────────────────────────────────────────────────
+cmd_rollback() {
+    print_banner
+    assert_termux
+    rollback
+}
+
+# ── Command: status ──────────────────────────────────────────────────────────
+cmd_status() {
+    print_banner
+    print_status
+}
+
+# ── Command: deps ────────────────────────────────────────────────────────────
+cmd_deps() {
+    print_banner
+    assert_termux
+    install_deps "false"
+    verify_tools
+    print_dep_status
+}
+
+# ── Command: clean ───────────────────────────────────────────────────────────
+cmd_clean() {
+    print_banner
+    log_step "Cleaning up..."
+    cleanup_dir "$LLAMUX_BUILD_DIR"
+    go clean -cache 2>/dev/null || true
+    log_ok "Build artifacts cleaned"
+}
+
+# ── Command: version ─────────────────────────────────────────────────────────
+cmd_version() {
+    echo "llamux $LLAMUX_VERSION"
+}
+
+# ── Main dispatch ────────────────────────────────────────────────────────────
+main() {
+    local command="${1:-help}"
+    shift || true
+
+    case "$command" in
+        install)    cmd_install "$@" ;;
+        rollback)   cmd_rollback "$@" ;;
+        status)     cmd_status "$@" ;;
+        deps)       cmd_deps "$@" ;;
+        clean)      cmd_clean "$@" ;;
+        version|--version|-v) cmd_version ;;
+        help|--help|-h)       print_usage ;;
+        *)
+            log_error "Unknown command: $command"
+            echo ""
+            print_usage
+            exit 1
+            ;;
+    esac
+}
+
+main "$@"

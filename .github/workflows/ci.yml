@@ -1,0 +1,32 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint:
+    name: ShellCheck Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install ShellCheck
+        run: sudo apt-get install -y shellcheck
+      - name: Lint all shell scripts
+        run: |
+          shellcheck -x llamux lib/*.sh
+          echo "✅ ShellCheck passed"
+
+  test:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install bats-core
+        run: |
+          sudo apt-get install -y bats
+      - name: Run unit tests
+        run: |
+          bats tests/test_utils.bats tests/test_source.bats tests/test_patch.bats tests/test_install.bats
