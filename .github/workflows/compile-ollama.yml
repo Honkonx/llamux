@@ -1,0 +1,137 @@
+name: Compile Ollama · Android ARM64
+
+on:
+  workflow_dispatch:
+    inputs:
+      ollama_version:
+        description: 'Ollama version tag (e.g. v0.6.5) — leave empty for latest'
+        required: false
+        default: ''
+
+env:
+  NDK_VERSION: r27c
+  NDK_URL: https://dl.google.com/android/repository/android-ndk-r27c-linux.zip
+  ANDROID_API: 24
+  ABI: arm64-v8a
+  GO_VERSION: '1.22'
+
+jobs:
+  build:
+    # ubuntu-24.04 tiene libglslang-dev con el nombre correcto
+    # ubuntu-22.04 lo llama glslang-dev → causa el error "Unable to locate package libglslang-dev"
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Checkout llamux fork
+        uses: actions/checkout@v4
+        with:
+          repository: JediRhymeTrix/llamux
+          path: llamux
+
+      - name: Resolve Ollama version
+        id: version
+        run: |
+          if [ -n "${{ github.event.inputs.ollama_version }}" ]; then
+            echo "tag=${{ github.event.inputs.ollama_version }}" >> "$GITHUB_OUTPUT"
+          else
+            TAG=$(curl -fsSL https://api.github.com/repos/ollama/ollama/releases/latest \
+              | grep '"tag_name"' | cut -d'"' -f4)
+            echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+          fi
+          echo "Ollama version: $(cat $GITHUB_OUTPUT | grep tag | cut -d= -f2)"
+
+      - name: Setup Go ${{ env.GO_VERSION }}
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - name: Install Android NDK ${{ env.NDK_VERSION }}
+        run: |
+          wget -q "$NDK_URL" -O ndk.zip
+          unzip -q ndk.zip -d $HOME
+          echo "ANDROID_NDK_HOME=$HOME/android-ndk-$NDK_VERSION" >> "$GITHUB_ENV"
+          echo "$HOME/android-ndk-$NDK_VERSION/toolchains/llvm/prebuilt/linux-x86_64/bin" >> "$GITHUB_PATH"
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends \
+            cmake \
+            ninja-build \
+            libvulkan-dev \
+            glslang-tools \
+            libglslang-dev \
+            spirv-tools \
+            shaderc \
+            ccache
+
+      - name: Clone Ollama ${{ steps.version.outputs.tag }}
+        run: |
+          git clone --depth=1 \
+            --branch "${{ steps.version.outputs.tag }}" \
+            https://github.com/ollama/ollama.git \
+            ollama
+
+      - name: Apply llamux Android patches
+        working-directory: ollama
+        run: |
+          for patch in ../llamux/patches/*.patch; do
+            echo "Applying: $patch"
+            git apply "$patch" || echo "WARN: patch failed (may already be applied)"
+          done
+
+      - name: Set up ccache
+        run: |
+          ccache --max-size=2G
+          echo "CC=ccache aarch64-linux-android$ANDROID_API-clang" >> "$GITHUB_ENV"
+          echo "CXX=ccache aarch64-linux-android$ANDROID_API-clang++" >> "$GITHUB_ENV"
+
+      - name: Build Ollama for ARM64 Android
+        working-directory: ollama
+        env:
+          GOOS: android
+          GOARCH: arm64
+          CGO_ENABLED: '1'
+          CC: ccache aarch64-linux-android${{ env.ANDROID_API }}-clang
+          CXX: ccache aarch64-linux-android${{ env.ANDROID_API }}-clang++
+          ANDROID_NDK_HOME: ${{ env.ANDROID_NDK_HOME }}
+        run: |
+          go build \
+            -ldflags="-s -w" \
+            -trimpath \
+            -o ../ollama-arm64-android \
+            .
+
+      - name: Verify binary
+        run: |
+          ls -lh ollama-arm64-android
+          file ollama-arm64-android
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ollama-arm64-android-${{ steps.version.outputs.tag }}
+          path: ollama-arm64-android
+          retention-days: 30
+
+      - name: Create Release
+        if: github.event_name == 'workflow_dispatch'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ollama-android-${{ steps.version.outputs.tag }}
+          name: "Ollama ${{ steps.version.outputs.tag }} · Android ARM64"
+          body: |
+            Ollama ${{ steps.version.outputs.tag }} compilado para Android ARM64
+            con parches llamux (JediRhymeTrix/llamux).
+
+            **Instalación en Termux:**
+            ```bash
+            # Descargar y reemplazar el binario de Ollama
+            curl -L "https://github.com/${{ github.repository }}/releases/download/ollama-android-${{ steps.version.outputs.tag }}/ollama-arm64-android" \
+              -o "$PREFIX/bin/ollama"
+            chmod +x "$PREFIX/bin/ollama"
+            ollama --version
+            ```
+          files: ollama-arm64-android
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
